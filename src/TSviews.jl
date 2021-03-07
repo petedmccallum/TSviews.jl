@@ -1,5 +1,19 @@
 module TSviews
 
-# Write your package code here.
+
+using Blink, Interact, PlotlyJS, JSON, CSV, DataFrames, Dates
+
+
+include("Init\\Init_project.jl")
+include("UI\\Launch.jl")
+include("UI\\DataViewer.jl")
+
+
+function __init__()
+
+    ui_launch()
+
+
+end
 
 end
