@@ -26,6 +26,9 @@ function ui_launch()
         "raw" => textbox("Choose a folder (i.e. deposit raw data in a new folder called '.../raw')"),
         "compiled" => textbox("Choose a different folder (i.e. make new empty folder called '.../compiled')"),
     )
+    filepickers = Dict(
+        "shared_config" => filepicker("Select \"shared_config.json\" file"),
+    )
 
 
     # Restyle widgets
@@ -52,6 +55,10 @@ function ui_launch()
         :height => "36px",
     )
     dropdowns["existing"].scope.dom.props[:style] = Dict(
+        :width => "170px",
+        :height => "36px",
+    )
+    filepickers["shared_config"].scope.dom.props[:style] = Dict(
         :width => "170px",
         :height => "36px",
     )
@@ -83,6 +90,14 @@ function ui_launch()
                 HTML(string("<div style='font-size:16px'>Compiled data</div>")))
             ),
             textboxes["compiled"],
+        ),
+        vskip(8px),
+        hbox(
+            width("200px",vbox(
+                vskip(5px),
+                HTML(string("<div style='font-size:16px'>Shared viewer config.</div>")))
+            ),
+            filepickers["shared_config"],
             hskip(20px),
         ),
         vskip(8px),
@@ -142,6 +157,7 @@ function ui_launch()
             paths = Dict(
                 "raw" => textboxes["raw"].output.val,
                 "compiled" => textboxes["compiled"].output.val,
+                "shared_config" => filepickers["shared_config"].output.val,
             )
 
             appdata_local = joinpath(Base.Filesystem.homedir(),"AppData","Local","julia_projects","TSviews","projects")
