@@ -138,11 +138,25 @@ function ui_launch()
         buttons_existing in buttons["existing"]
 
         if buttons_new[]>0
-            println("name\t->\t$(textboxes["name"].output.val)")
-            println("raw\t->\t$(textboxes["raw"].output.val)")
-            println("compiled\t->\t$(textboxes["compiled"].output.val)")
-            paths = Dict()
-            return paths
+            project_name = textboxes["name"].output.val
+            paths = Dict(
+                "raw" => textboxes["raw"].output.val,
+                "compiled" => textboxes["compiled"].output.val,
+            )
+
+            appdata_local = joinpath(Base.Filesystem.homedir(),"AppData","Local","julia_projects","TSviews","projects")
+            fname = joinpath(appdata_local,"$project_name.json")
+            open(fname,"w") do f
+                JSON.print(f,paths)
+            end
+
+            project = Project()
+            project.name=project_name
+            project.paths=paths
+            project.raw=Dict()
+            project.compiled=Dict()
+            project.data=Dict()
+
 
         elseif buttons_existing[]>0
             project_name = dropdowns["existing"].output.val
