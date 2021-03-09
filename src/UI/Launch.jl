@@ -9,7 +9,7 @@ mutable struct Project
     Project() = new()
 end
 
-function ui_launch()
+function ui_launch_build()
     # Check for existing project JSONs (saved paths) in AppData/Local/julia_projects/TSviews/projects
     existing_projects = select_project()
 
@@ -147,6 +147,12 @@ function ui_launch()
         )
     )
 
+    return w,buttons,textboxes,filepickers,dropdowns
+end
+
+function ui_launch()
+
+    (w,buttons,textboxes,filepickers,dropdowns) = ui_launch_build()
 
     @manipulate for
         buttons_new in buttons["new"],
@@ -190,7 +196,19 @@ function ui_launch()
             project.compiled=Dict()
             project.data=Dict()
 
-            plot_data(w, project)
+            # plot_data(w, project)
+
+
+            ##################################################################
+
+            @time project = import_raw(project)
+
+            println(keys(project.data))
+
+
+
+            ##################################################################
+
 
         end
 
