@@ -1,4 +1,4 @@
-function import_raw(project,i_site=1)
+function import_data(project;i_site=1)
 
     # Load config file (for raw schema)
     fname = project.paths["shared_config"]
@@ -7,14 +7,29 @@ function import_raw(project,i_site=1)
     end
     config = JSON.parse(f)
 
+    sites = String.(keys(config["sites"]))
+    site = sites[i_site]
+
+    dir = readdir(project.paths["compiled"])
+    if sum(occursin.(site,dir))>0
+        project.data[site] = CSV.read(joinpath(
+            project.paths["compiled"],
+            "$(site).csv"),
+            DataFrame,normalizenames=true
+        )
+    else
+        project = import_raw(project,config,site=site)
+    end
+    return project
+end
+
+function import_raw(project,config,site)
 
     # All filenames in raw folder
     raw_fnames = readdir(project.paths["raw"])
 
 
-    # Load data for site 1 (all relevant files based on config)
-    sites = String.(keys(config["sites"]))
-    site = sites[i_site]
+    # Load data for selected site (all relevant files based on config)
     target_fnames = config["sites"][site]
     loaddata(target_fname) = CSV.read(joinpath(project.paths["raw"],target_fname), DataFrame,normalizenames=true,delim=config["raw_schema"]["delim"])
     data_arr = loaddata.(target_fnames)

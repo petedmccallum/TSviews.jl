@@ -196,14 +196,14 @@ function ui_launch()
             project.compiled=Dict()
             project.data=Dict()
 
+
             # plot_data(w, project)
+            @time project = import_data(project)
 
 
             ##################################################################
+            ##################################################################
 
-            @time project = import_raw(project)
-
-            println(keys(project.data))
 
 
 
