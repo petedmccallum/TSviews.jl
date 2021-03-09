@@ -8,29 +8,29 @@ function import_data(project;i_site=1)
     config = JSON.parse(f)
 
     sites = String.(keys(config["sites"]))
-    site = sites[i_site]
+    project.current_site = sites[i_site]
 
     dir = readdir(project.paths["compiled"])
-    if sum(occursin.(site,dir))>0
-        project.data[site] = CSV.read(joinpath(
+    if sum(occursin.(project.current_site,dir))>0
+        project.data[project.current_site] = CSV.read(joinpath(
             project.paths["compiled"],
-            "$(site).csv"),
+            "$(project.current_site).csv"),
             DataFrame,normalizenames=true
         )
     else
-        project = import_raw(project,config,site=site)
+        project = import_raw(project,config)
     end
     return project
 end
 
-function import_raw(project,config,site)
+function import_raw(project,config)
 
     # All filenames in raw folder
     raw_fnames = readdir(project.paths["raw"])
 
 
     # Load data for selected site (all relevant files based on config)
-    target_fnames = config["sites"][site]
+    target_fnames = config["sites"][project.current_site]
     loaddata(target_fname) = CSV.read(joinpath(project.paths["raw"],target_fname), DataFrame,normalizenames=true,delim=config["raw_schema"]["delim"])
     data_arr = loaddata.(target_fnames)
 
@@ -70,11 +70,11 @@ function import_raw(project,config,site)
     fill_df_by_index(data_fill,df,i_map,uniq_cols) = data_fill[i_map,uniq_cols].=df[!,uniq_cols]
     fill_df_by_index.((data_fill,),data_arr,i_maps,unique_cols_arr)
 
-    project.data[site] = data_fill
+    project.data[project.current_site] = data_fill
 
     CSV.write(joinpath(
         project.paths["compiled"],
-        "$(site).csv"
+        "$(project.current_site).csv"
     ),data_fill)
 
     return project
