@@ -65,7 +65,7 @@ function ui_launch_build()
 
 
     # Build elements
-    el_new = vbox(
+    div_new = vbox(
         HTML(string("<div style='font-size:24px'>New project</div>")),
         vskip(8px),
         hbox(
@@ -109,7 +109,7 @@ function ui_launch_build()
             buttons["new"],
         )
     )
-    el_existing = vbox(
+    div_existing = vbox(
         HTML(string("<div style='font-size:24px'>Existing project</div>")),
         vskip(8px),
         hbox(
@@ -122,12 +122,12 @@ function ui_launch_build()
             buttons["existing"],
         )
     )
-    el_ctrl = vbox(
-        el_new,
+    div_ctrl = vbox(
+        div_new,
         vskip(50px),
         Interact.hline(),
         vskip(50px),
-        el_existing,
+        div_existing,
     )
 
 
@@ -142,7 +142,7 @@ function ui_launch_build()
             hskip(100px),
             vbox(
                 vskip(50px),
-                el_ctrl,
+                div_ctrl,
             )
         )
     )
@@ -181,6 +181,10 @@ function ui_launch()
 
 
         elseif buttons_existing[]>0
+            ##################################################################
+            # (w,buttons,textboxes,filepickers,dropdowns) = ui_launch_build()
+            ##################################################################
+
             project_name = dropdowns["existing"].output.val
             appdata_local = joinpath(Base.Filesystem.homedir(),"AppData","Local","julia_projects","TSviews","projects")
             fname = joinpath(appdata_local,"$project_name.json")
@@ -200,13 +204,10 @@ function ui_launch()
             # plot_data(w, project)
             @time project = import_data(project)
 
-
             ##################################################################
             ##################################################################
 
-
-
-
+            
             ##################################################################
 
 

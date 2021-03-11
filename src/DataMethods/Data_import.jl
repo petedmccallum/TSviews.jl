@@ -7,8 +7,8 @@ function import_data(project;i_site=1)
     end
     config = JSON.parse(f)
 
-    sites = String.(keys(config["sites"]))
-    project.current_site = sites[i_site]
+    project.sites = String.(keys(config["sites"]))
+    project.current_site = project.sites[i_site]
 
     dir = readdir(project.paths["compiled"])
     if sum(occursin.(project.current_site,dir))>0
@@ -47,28 +47,8 @@ function import_raw(project,config)
     find_unique_cols(cols,i) = setdiff(cols[i],vcat(cols[Not(i)]...))
     unique_cols_arr = find_unique_cols.((cols_arr,),1:length(cols_arr))
 
-
-    # find all recorded timestamps (may be irregular, not nearest minute)
-    datetime_vec = sort(unique(vcat(
-        data_arr[1].datetime,
-        data_arr[2].datetime,
-    )))
-    # Append interpolated spaces
-    datetime_vec_interp = ceil(minimum(datetime_vec),Dates.Minute):Minute(1):floor(maximum(datetime_vec),Dates.Minute)
-    datetime_vec = sort(unique(vcat(datetime_vec,datetime_vec_interp)))
-    # Create new blank dataframe
-    data_fill = DataFrame(:datetime=>datetime_vec)
-    fill_missing_df_col(df,col) = df[!,col] = fill!(Array{Union{Missing,Float64}}(undef,nrow(df)),missing)
-    cols = vcat(unique_cols_arr...)
-    fill_missing_df_col.((data_fill,),cols)
-
-
-    # Map data records to blank dataframe
-    findall_arr(arr,val) = findall(arr.==val)
-    find_i_maps(data_fill,df) = vcat(findall_arr.((data_fill.datetime,),df.datetime)...)
-    i_maps = find_i_maps.((data_fill,),data_arr)
-    fill_df_by_index(data_fill,df,i_map,uniq_cols) = data_fill[i_map,uniq_cols].=df[!,uniq_cols]
-    fill_df_by_index.((data_fill,),data_arr,i_maps,unique_cols_arr)
+    # Interpolations
+    data_fill = eval_interpolations(data_arr,unique_cols_arr,config)
 
     project.data[project.current_site] = data_fill
 

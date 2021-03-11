@@ -7,7 +7,8 @@ using Blink, Interact, PlotlyJS, JSON, CSV, DataFrames, Dates
 include("Init\\Init_project.jl")
 include("UI\\Launch.jl")
 include("UI\\DataViewer.jl")
-include("DataMethods\\Raw_import.jl")
+include("DataMethods\\Data_import.jl")
+include("DataMethods\\Interpolation.jl")
 
 
 function __init__()
