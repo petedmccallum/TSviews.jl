@@ -181,9 +181,6 @@ function ui_launch()
 
 
         elseif buttons_existing[]>0
-            ##################################################################
-            # (w,buttons,textboxes,filepickers,dropdowns) = ui_launch_build()
-            ##################################################################
 
             project_name = dropdowns["existing"].output.val
             appdata_local = joinpath(Base.Filesystem.homedir(),"AppData","Local","julia_projects","TSviews","projects")
@@ -205,7 +202,7 @@ function ui_launch()
 
             data_viewer(w,project)
 
-            
+
             ##################################################################
             ##################################################################
 

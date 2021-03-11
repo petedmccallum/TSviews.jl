@@ -1,5 +1,5 @@
 function data_viewer(w,project)
-        ## Time window
+    ## Time window
     nDays = 1
     i_lastday = findlast(Time.(project.data[project.current_site].datetime).==Time(0))
     t_start = project.data[project.current_site].datetime[i_lastday] - Day(nDays)
@@ -8,15 +8,15 @@ function data_viewer(w,project)
     marker_trace(df,col) = scatter(x=df.datetime,y=df[:,col],mode="markers",name=col)
     line_trace(df,col) = scatter(x=df.datetime,y=df[:,col],mode="line",name=col)
     cols = names(project.data[project.current_site])[2:end]
-    # tr_records = marker_trace.((project.data[project.current_site],),cols)
-    tr_records = line_trace.((project.data[project.current_site],),cols)
+    # tr_site = marker_trace.((project.data[project.current_site],),cols)
+    tr_site = line_trace.((project.data[project.current_site],),cols)
     layout = Layout(Dict(
         "height"=>800,
         "width"=>1800,
         "legend_orientation"=>"h",
         "legend_x"=>0.,
         "legend_y"=>1.05))
-    global plt = plot(tr_records,layout);
+    global plt = plot(tr_site,layout);
 
 
 
@@ -52,28 +52,30 @@ function data_viewer(w,project)
         )
     )
 
-    widget_sites_prev=widget_sites[]
+    global widget_sites_prev=widget_sites[]
     @manipulate for
         widget_sites_ in widget_sites,
         widget_startDate_ in widget_startDate,
-        widget_numDays_ in widget_numDays,
-        widget_sites_prev_ in widget_sites_prev
+        widget_numDays_ in widget_numDays
 
         relayout!(plt,xaxis_range=widget_startDate[] .+ Day.([0,widget_numDays[]]))
 
 
-        if widget_sites_ != widget_sites_prev_
+        if widget_sites_ != widget_sites_prev
             project.current_site = widget_sites[]
+            if sum(keys(project.data).==project.current_site) == 0
+                i_site = findfirst(project.sites.==project.current_site)
+                project = import_data(project;i_site=i_site)
+            end
+            sleep(0.1)
             cols = names(project.data[project.current_site])[2:end]
-            traces = [scatter(
-                x=project.data[project.current_site].datetime,
-                y=project.data[project.current_site][!,col],
-                line_width=0.5,
-                name=replace(string(col),"Power_Wm_sid_"=>""))
-                for col in cols]
-            [deletetraces!(plt,i) for i in length(plt.plot.data):-1:1]
-            [addtraces!(plt,trace) for trace in traces]
-            widget_sites_prev_=widget_sites_
+            tr_site = line_trace.((project.data[project.current_site],),cols)
+            deletetraces_arr(plt,i) = deletetraces!(plt,i)
+            L = length(plt.plot.data)
+            deletetraces_arr.((plt,),L:-1:1)
+            addtraces_arr(plt,tr) = addtraces!(plt,tr)
+            addtraces_arr.((plt,),tr_site)
+            widget_sites_prev=widget_sites[]
         end
 
     end
