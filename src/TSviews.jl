@@ -1,7 +1,7 @@
 module TSviews
 
 
-using Blink, Interact, PlotlyJS, JSON, CSV, DataFrames, Dates
+using Blink, Interact, PlotlyJS, JSON, CSV, DataFrames, Dates, Interpolations
 
 
 include("Init\\Init_project.jl")

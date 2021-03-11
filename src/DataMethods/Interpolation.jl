@@ -78,7 +78,7 @@ function step_interp(df,interp_step,col,t)
     return y_iterp
 end
 
-function interp_col(df,t_vec,target_cols,col)
+function interp_col(config,df,t_vec,target_cols,col)
     i_interp_method = findfirst(occursin.(col,target_cols))
 
     if !isnothing(i_interp_method)
@@ -99,7 +99,7 @@ function eval_interpolations(data_arr,unique_cols_arr,config)
 
     target_cols = string.(keys(config["interpolations"]))
 
-    interp_arr(df,t_vec,target_cols,cols) = interp_col.((df,),t_vec,(target_cols,),cols)
+    interp_arr(df,t_vec,target_cols,cols) = interp_col.((config,),(df,),t_vec,(target_cols,),cols)
     data_interp = interp_arr.(data_arr,t_vecs,(target_cols,),unique_cols_arr)
 
     data_interp = vcat(data_interp...)
