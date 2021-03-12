@@ -1,4 +1,11 @@
 function data_viewer(w,project)
+
+    fname = project.paths["shared_config"]
+    f = open(fname) do file
+        read(file,String)
+    end
+    config = JSON.parse(f)
+
     ## Time window
     nDays = 1
     i_lastday = findlast(Time.(project.data[project.current_site].datetime).==Time(0))
@@ -8,14 +15,38 @@ function data_viewer(w,project)
 
     cols = names(project.data[project.current_site])[2:end]
     dfs = include_df_gaps.((project.data[project.current_site],),cols)
-    tr_site = line_trace.(dfs)
+    n_plots = length(keys(config["subplots"]))
+    tr_site = line_trace.(dfs,(config,),(n_plots,))
     layout = Layout(Dict(
-        "height"=>800,
-        "width"=>1800,
-        "legend_orientation"=>"h",
-        "legend_x"=>0.,
-        "legend_y"=>1.05))
-    global plt = plot(tr_site,layout);
+        :height=>800,
+        :width=>1800,
+        :legend_orientation=>"h",
+        :legend_x=>0.,
+        :legend_y=>1.05,
+        :margin_l=>80,
+    ))
+
+    if n_plots == 1
+        relayout!(layout, xaxis_domain=[0., 1.])
+        relayout!(layout, yaxis_domain=[0., 0.3])
+    elseif n_plots == 2
+        relayout!(layout, xaxis_domain=[0., 1.])
+        relayout!(layout, yaxis_domain=[0., 0.3])
+        relayout!(layout, xaxis2_domain=[0., 1.])
+        relayout!(layout, yaxis2_domain=[0.35, 0.65])
+    elseif n_plots == 3
+        subplot_yaxes = find_subplot_yaxis.((config,),1:n_plots)
+        relayout!(layout, xaxis_domain=[0., 1.])
+        relayout!(layout, xaxis2_domain=[0., 1.])
+        relayout!(layout, xaxis3_domain=[0., 1.])
+        relayout!(layout, yaxis_domain=[0., 0.3])
+        relayout!(layout, yaxis2_domain=[0.35, 0.65])
+        relayout!(layout, yaxis3_domain=[0.7, 1.])
+        relayout!(layout, yaxis_title=subplot_yaxes[3])
+        relayout!(layout, yaxis2_title=subplot_yaxes[2])
+        relayout!(layout, yaxis3_title=subplot_yaxes[1])
+    end
+    global plt = plot(tr_site[:],layout);
 
 
 
@@ -69,7 +100,8 @@ function data_viewer(w,project)
             sleep(0.1)
             cols = names(project.data[project.current_site])[2:end]
             dfs = include_df_gaps.((project.data[project.current_site],),cols)
-            tr_site = line_trace.(dfs)
+            # n_plots = length(keys(config["subplots"]))
+            tr_site = line_trace.(dfs,(config,),(n_plots,))
             L = length(plt.plot.data)
             deletetraces_arr.((plt,),L:-1:1)
             addtraces_arr.((plt,),tr_site)
