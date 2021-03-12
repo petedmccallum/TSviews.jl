@@ -9,12 +9,15 @@ function include_df_gaps(df,col)
 end
 
 function line_trace(df)
-    col_name = names(df)[2]
+    col = names(df)[2]
+    col_alias = config["timeseries"][col]["alias"]
+    col_colour = config["timeseries"][col]["colour"]
     tr = scatter(
         x=df.datetime,
         y=df[:,2],
         mode="line",
-        name=col_name)
+        line=attr(color=col_colour),
+        name=col_alias)
 end
 
 deletetraces_arr(plt,i) = deletetraces!(plt,i)
