@@ -5,11 +5,10 @@ function data_viewer(w,project)
     t_start = project.data[project.current_site].datetime[i_lastday] - Day(nDays)
     t_end = project.data[project.current_site].datetime[i_lastday]
 
-    marker_trace(df,col) = scatter(x=df.datetime,y=df[:,col],mode="markers",name=col)
-    line_trace(df,col) = scatter(x=df.datetime,y=df[:,col],mode="line",name=col)
+
     cols = names(project.data[project.current_site])[2:end]
-    # tr_site = marker_trace.((project.data[project.current_site],),cols)
-    tr_site = line_trace.((project.data[project.current_site],),cols)
+    dfs = include_df_gaps.((project.data[project.current_site],),cols)
+    tr_site = line_trace.(dfs)
     layout = Layout(Dict(
         "height"=>800,
         "width"=>1800,
@@ -69,11 +68,10 @@ function data_viewer(w,project)
             end
             sleep(0.1)
             cols = names(project.data[project.current_site])[2:end]
-            tr_site = line_trace.((project.data[project.current_site],),cols)
-            deletetraces_arr(plt,i) = deletetraces!(plt,i)
+            dfs = include_df_gaps.((project.data[project.current_site],),cols)
+            tr_site = line_trace.(dfs)
             L = length(plt.plot.data)
             deletetraces_arr.((plt,),L:-1:1)
-            addtraces_arr(plt,tr) = addtraces!(plt,tr)
             addtraces_arr.((plt,),tr_site)
             widget_sites_prev=widget_sites[]
         end
