@@ -1,9 +1,8 @@
 mutable struct Project
     name::String
     paths::Dict
+    config::Dict
     sites::Array{String}
-    raw::Dict
-    compiled::Dict
     current_site::String
     data::Dict
     Project() = new()
@@ -175,8 +174,6 @@ function ui_launch()
             project = Project()
             project.name=project_name
             project.paths=paths
-            project.raw=Dict()
-            project.compiled=Dict()
             project.data=Dict()
 
 
@@ -190,12 +187,20 @@ function ui_launch()
             end
             paths = JSON.parse(f)
 
+            # Load config file
+            fname = paths["shared_config"]
+            f = open(fname) do file
+                read(file,String)
+            end
+            config = JSON.parse(f)
+
+            # Project struct
             project = Project()
             project.name=project_name
             project.paths=paths
-            project.raw=Dict()
-            project.compiled=Dict()
+            project.config=config
             project.data=Dict()
+
 
 
             @time project = import_data(project)

@@ -1,13 +1,7 @@
 function import_data(project;i_site=1)
 
-    # Load config file (for raw schema)
-    fname = project.paths["shared_config"]
-    f = open(fname) do file
-        read(file,String)
-    end
-    config = JSON.parse(f)
 
-    project.sites = String.(keys(config["sites"]))
+    project.sites = String.(keys(project.config["sites"]))
     project.current_site = project.sites[i_site]
 
     dir = readdir(project.paths["compiled"])
@@ -18,37 +12,44 @@ function import_data(project;i_site=1)
             DataFrame,normalizenames=true
         )
     else
-        project = import_raw(project,config)
+        project = import_raw(project)
     end
     return project
 end
 
-function import_raw(project,config)
+function import_raw(project)
 
     # All filenames in raw folder
     raw_fnames = readdir(project.paths["raw"])
 
 
     # Load data for selected site (all relevant files based on config)
-    target_fnames = config["sites"][project.current_site]
-    loaddata(target_fname) = CSV.read(joinpath(project.paths["raw"],target_fname), DataFrame,normalizenames=true,delim=config["raw_schema"]["delim"])
-    data_arr = loaddata.(target_fnames)
+    target_fnames = project.config["sites"][project.current_site]
+    data_arr = loaddata.((project,),target_fnames)
 
 
     # Find time column and convert to datetime (all data files for current site)
-    find_time_col(df) = findfirst(occursin.("time",lowercase.(names(df))))
     i_time_cols = find_time_col.(data_arr)
-    new_DateTime_col(df,i_time_col) = df[!,:datetime]=DateTime.(df[!,i_time_col],"y-m-d H:M:S")
     new_DateTime_col.(data_arr,i_time_cols)
 
 
     # Identify column names unique to each data file
     cols_arr = names.(data_arr)
-    find_unique_cols(cols,i) = setdiff(cols[i],vcat(cols[Not(i)]...))
     unique_cols_arr = find_unique_cols.((cols_arr,),1:length(cols_arr))
 
     # Interpolations
-    data_fill = eval_interpolations(data_arr,unique_cols_arr,config)
+    data_interp = eval_interpolations(data_arr,unique_cols_arr,project.config)
+
+    # Include all missing timestamps (with missings)
+    data_fill = include_missing_timestamps(data_interp)
+
+
+    # Eval cooling cycles (if specified in config)
+    if sum(keys(project.config).=="status_eval")>0 && sum(keys(project.config["status_eval"]).=="ac")>0
+        cols = project.config["status_eval"]["ac"]
+        (data_fill, cooling_ranges_fill, standby_ranges_fill) = ECHOsched.eval_cooling(data_fill,cols)
+    end
+
 
     project.data[project.current_site] = data_fill
 

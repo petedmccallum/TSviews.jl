@@ -28,3 +28,4 @@ Manifest.toml
 app*
 public*
 .github/workflows*
+*testing*

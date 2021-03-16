@@ -1,10 +1,5 @@
 function data_viewer(w,project)
 
-    fname = project.paths["shared_config"]
-    f = open(fname) do file
-        read(file,String)
-    end
-    config = JSON.parse(f)
 
     ## Time window
     nDays = 1
@@ -12,11 +7,10 @@ function data_viewer(w,project)
     t_start = project.data[project.current_site].datetime[i_lastday] - Day(nDays)
     t_end = project.data[project.current_site].datetime[i_lastday]
 
-
-    cols = names(project.data[project.current_site])[2:end]
+    cols = string.(keys(project.config["timeseries"]))
     dfs = include_df_gaps.((project.data[project.current_site],),cols)
-    n_plots = length(keys(config["subplots"]))
-    tr_site = line_trace.(dfs,(config,),(n_plots,))
+    n_plots = length(keys(project.config["subplots"]))
+    tr_site = line_trace.(dfs,(project.config,),(n_plots,))
     layout = Layout(Dict(
         :height=>800,
         :width=>1800,
@@ -35,7 +29,7 @@ function data_viewer(w,project)
         relayout!(layout, xaxis2_domain=[0., 1.])
         relayout!(layout, yaxis2_domain=[0.35, 0.65])
     elseif n_plots == 3
-        subplot_yaxes = find_subplot_yaxis.((config,),1:n_plots)
+        subplot_yaxes = find_subplot_yaxis.((project.config,),1:n_plots)
         relayout!(layout, xaxis_domain=[0., 1.])
         relayout!(layout, xaxis2_domain=[0., 1.])
         relayout!(layout, xaxis3_domain=[0., 1.])
@@ -98,10 +92,9 @@ function data_viewer(w,project)
                 project = import_data(project;i_site=i_site)
             end
             sleep(0.1)
-            cols = names(project.data[project.current_site])[2:end]
+            cols = string.(keys(project.config["timeseries"]))
             dfs = include_df_gaps.((project.data[project.current_site],),cols)
-            # n_plots = length(keys(config["subplots"]))
-            tr_site = line_trace.(dfs,(config,),(n_plots,))
+            tr_site = line_trace.(dfs,(project.config,),(n_plots,))
             L = length(plt.plot.data)
             deletetraces_arr.((plt,),L:-1:1)
             addtraces_arr.((plt,),tr_site)
@@ -109,4 +102,5 @@ function data_viewer(w,project)
         end
 
     end
+    return plt
 end
