@@ -25,8 +25,9 @@ function line_trace(df,config,n_plots)
         yaxis=yaxis)
 end
 
+##
 
-function filltrace(datetime_vec,bool_vec;colour::String="#0000ff22",yaxis="y",val=1000.)
+function filltrace(datetime_vec,bool_vec;name::String="",colour::String="#0000ff22",yaxis="y",val=1000.)
     # Find ranges from boolean vector
     i = findall(bool_vec)
     sort!(i)
@@ -53,11 +54,39 @@ function filltrace(datetime_vec,bool_vec;colour::String="#0000ff22",yaxis="y",va
         fill="tozeroy",
         fillcolor=colour,
         yaxis=yaxis,
+        name=name,
         showlegend=false,
         hoverinfo="skip",hovertemplate=nothing
     )
 end
+function filltrace_set(project,i_subplot,i_filltrace)
+    n_plots = length(keys(project.config["subplots"]))
+    subplot_fields = find_subplot_fields.((project.config,),1:n_plots)
+    # i_subplot = findfirst(findall_arr2.(subplot_fields,(col,)))
+    find_subplot_max(project,col) = ceil(1.05*maximum(skipmissing(project.data[project.current_site][!,col])))
+    find_subplot_maxs(project,cols) = maximum(find_subplot_max.((project,),cols))
+    subplot_maxs = find_subplot_maxs.((project,),subplot_fields)
 
+    col = string.(keys(project.config["filltraces"]))[i_filltrace]
+
+    trace = filltrace(
+        project.data[project.current_site].datetime,
+        project.data[project.current_site][!,col];
+        name=project.config["filltraces"][col]["alias"],
+        colour=project.config["filltraces"][col]["colour"],
+        yaxis="y$(1+length(subplot_fields)-i_subplot)",
+        val=subplot_maxs[i_subplot],
+    )
+
+    if i_subplot == 1
+        restyle!(trace,showlegend=true)
+    end
+
+    return trace
+end
+filltrace_sets(project,i_subplot,i_filltrace) = filltrace_set.((project,),i_subplot,(i_filltrace,))
+
+##
 
 loaddata(project,target_fname) = CSV.read(joinpath(project.paths["raw"],target_fname), DataFrame,normalizenames=true,delim=project.config["raw_schema"]["delim"])
 find_time_col(df) = findfirst(occursin.("time",lowercase.(names(df))))

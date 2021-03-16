@@ -40,7 +40,10 @@ function data_viewer(w,project)
         relayout!(layout, yaxis2_title=subplot_yaxes[2])
         relayout!(layout, yaxis3_title=subplot_yaxes[1])
     end
-    global plt = plot(tr_site[:],layout);
+
+    filltraces = vcat(filltrace_sets.((project,),(1:length(project.config["subplots"]),),1:length(project.config["filltraces"]))...)
+
+    global plt = plot(vcat(tr_site,filltraces),layout);
 
 
 
@@ -95,9 +98,11 @@ function data_viewer(w,project)
             cols = string.(keys(project.config["timeseries"]))
             dfs = include_df_gaps.((project.data[project.current_site],),cols)
             tr_site = line_trace.(dfs,(project.config,),(n_plots,))
+            filltraces = vcat(filltrace_sets.((project,),(1:length(project.config["subplots"]),),1:length(project.config["filltraces"]))...)
+
             L = length(plt.plot.data)
             deletetraces_arr.((plt,),L:-1:1)
-            addtraces_arr.((plt,),tr_site)
+            addtraces_arr.((plt,),vcat(tr_site,filltraces))
             widget_sites_prev=widget_sites[]
         end
 
