@@ -194,6 +194,14 @@ function ui_launch()
             end
             config = JSON.parse(f)
 
+            # Load sites JSON file
+            fname = join(vcat(split(paths["shared_config"],"\\")[1:end-1],"sites.json"),"\\")
+            f = open(fname) do file
+                read(file,String)
+            end
+            push!(config,"sites"=>JSON.parse(f))
+
+
             # Project struct
             project = Project()
             project.name=project_name

@@ -13,3 +13,23 @@ function include_missing_timestamps(data)
     # sort
     sort!(data)
 end
+
+
+function combine_similar_df(data_arr)
+    # Find groups of unique cols across dataframes
+    cols_arr = names.(data_arr)
+    cols_arr_unq = unique(cols_arr)
+    unique_cols_arr = find_unique_cols.((cols_arr_unq,),1:length(cols_arr_unq))
+    # Rationalise columns across all dataframes, to datetime and unique cols
+    target_cols = vcat(unique_cols_arr...)
+    rationalise_cols(data,cols,target_cols) = data[:,vcat("datetime",intersect(target_cols,cols))]
+    data_arr = rationalise_cols.(data_arr,cols_arr,(target_cols,))
+    # Merge similar dataframes
+    cols_arr_joinstr = join.(cols_arr,",")
+    cols_arr_joinstr_unq = unique(cols_arr_joinstr)
+    findall_arr(arr,val) = findall(arr.==val)
+    i_group = findall_arr.((cols_arr_joinstr,),cols_arr_joinstr_unq)
+    vcat_data(data_arr,i) = unique(vcat(tuple(data_arr[i]...)...))
+    data_arr = vcat_data.((data_arr,),i_group)
+    return data_arr, unique_cols_arr
+end

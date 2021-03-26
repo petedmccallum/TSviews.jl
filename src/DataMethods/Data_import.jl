@@ -1,7 +1,7 @@
 function import_data(project;i_site=1)
 
 
-    project.sites = String.(keys(project.config["sites"]))
+    project.sites = sort(String.(keys(project.config["sites"])))
     project.current_site = project.sites[i_site]
 
     dir = readdir(project.paths["compiled"])
@@ -27,6 +27,8 @@ function import_raw(project)
     target_fnames = project.config["sites"][project.current_site]
     data_arr = loaddata.((project,),target_fnames)
 
+    # Remove empty dataframes
+    data_arr = data_arr[isempty.(data_arr).==false]
 
     # Find time column and convert to datetime (all data files for current site)
     i_time_cols = find_time_col.(data_arr)
@@ -35,7 +37,9 @@ function import_raw(project)
 
     # Identify column names unique to each data file
     cols_arr = names.(data_arr)
-    unique_cols_arr = find_unique_cols.((cols_arr,),1:length(cols_arr))
+
+    # Combine similar dataframes (with same column headings)
+    (data_arr, unique_cols_arr) = combine_similar_df(data_arr)
 
     # Interpolations
     data_interp = eval_interpolations(data_arr,unique_cols_arr,project.config)
