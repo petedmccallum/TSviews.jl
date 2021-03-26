@@ -51,7 +51,7 @@ function import_raw(project)
     # Eval cooling cycles (if specified in config)
     if sum(keys(project.config).=="status_eval")>0 && sum(keys(project.config["status_eval"]).=="ac")>0
         cols = project.config["status_eval"]["ac"]
-        (data_fill, cooling_ranges_fill, standby_ranges_fill) = ECHOsched.eval_cooling(data_fill,cols)
+        (data_fill, cooling_ranges_fill, standby_ranges_fill) = eval_cooling(data_fill,cols)
     end
 
 
