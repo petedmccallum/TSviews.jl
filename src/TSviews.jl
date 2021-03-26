@@ -19,8 +19,8 @@ include("ECHOsched\\cooling\\Util.jl")
 
 function __init__()
 
-    ui_launch()
-
+    select_project()
+    
 
 end
 
