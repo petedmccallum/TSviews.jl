@@ -35,8 +35,8 @@ function linear_interp(df,col,t_vec)
 
     # Interp function
     interp_linear = LinearInterpolation(
-        sort(t_val_irreg),
-        sort(df[i_nonmissing,col]),
+        t_val_irreg,
+        df[i_nonmissing,col],
     )
 
     # Interpolation result
