@@ -122,11 +122,11 @@ function ui_launch_build()
         )
     )
     div_ctrl = vbox(
-        div_new,
+        div_existing,
         vskip(50px),
         Interact.hline(),
         vskip(50px),
-        div_existing,
+        div_new,
     )
 
 
@@ -149,6 +149,37 @@ function ui_launch_build()
     return w,buttons,textboxes,filepickers,dropdowns
 end
 
+function launch_project(w,project_name,paths)
+
+    # Load config file
+    fname = paths["shared_config"]
+    f = open(fname) do file
+        read(file,String)
+    end
+    config = JSON.parse(f)
+
+    # Load sites JSON file
+    fname = join(vcat(split(paths["shared_config"],"\\")[1:end-1],"sites.json"),"\\")
+    f = open(fname) do file
+        read(file,String)
+    end
+    push!(config,"sites"=>JSON.parse(f))
+
+
+    # Project struct
+    project = Project()
+    project.name=project_name
+    project.paths=paths
+    project.config=config
+    project.data=Dict()
+
+
+
+    @time project = import_data(project)
+
+    data_viewer(w,project)
+end
+
 function ui_launch()
 
     (w,buttons,textboxes,filepickers,dropdowns) = ui_launch_build()
@@ -158,6 +189,7 @@ function ui_launch()
         buttons_existing in buttons["existing"]
 
         if buttons_new[]>0
+            @assert textboxes["name"].output.val!="" "Enter project name"
             project_name = textboxes["name"].output.val
             paths = Dict(
                 "raw" => textboxes["raw"].output.val,
@@ -171,10 +203,7 @@ function ui_launch()
                 JSON.print(f,paths)
             end
 
-            project = Project()
-            project.name=project_name
-            project.paths=paths
-            project.data=Dict()
+            launch_project(w,project_name,paths)
 
 
         elseif buttons_existing[]>0
@@ -187,40 +216,8 @@ function ui_launch()
             end
             paths = JSON.parse(f)
 
-            # Load config file
-            fname = paths["shared_config"]
-            f = open(fname) do file
-                read(file,String)
-            end
-            config = JSON.parse(f)
 
-            # Load sites JSON file
-            fname = join(vcat(split(paths["shared_config"],"\\")[1:end-1],"sites.json"),"\\")
-            f = open(fname) do file
-                read(file,String)
-            end
-            push!(config,"sites"=>JSON.parse(f))
-
-
-            # Project struct
-            project = Project()
-            project.name=project_name
-            project.paths=paths
-            project.config=config
-            project.data=Dict()
-
-
-
-            @time project = import_data(project)
-
-            data_viewer(w,project)
-
-
-            ##################################################################
-            ##################################################################
-
-
-            ##################################################################
+            launch_project(w,project_name,paths)
 
 
         end
