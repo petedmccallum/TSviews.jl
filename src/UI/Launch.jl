@@ -178,6 +178,8 @@ function launch_project(w,project_name,paths)
     @time project = import_data(project)
 
     data_viewer(w,project)
+
+    annotate_traces(w,project)
 end
 
 function ui_launch()
