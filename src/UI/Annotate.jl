@@ -1,4 +1,4 @@
-function annotate_traces(w,project)
+function annotate_traces(w,project;fname="AnnotationsLog.csv")
     ptLog = DataFrame(
         fieldname=[],
         datetime_from=[],
@@ -20,15 +20,16 @@ function annotate_traces(w,project)
     if existing_folder==false
         mkdir(project.paths["annot"])
     end
-    fname = "AnnotationsLog.csv"
+
     existing_file = sum(readdir(project.paths["annot"]).==fname)>0
+    global annot_file = joinpath(project.paths["annot"],fname)
     if existing_file==false
-        CSV.write(joinpath(project.paths["annot"],fname),ptLog)
+        CSV.write(annot_file,ptLog)
     end
 
 
     on(plt["click"]) do pt_click
-        existing_log = CSV.read(joinpath(project.paths["annot"],fname),DataFrame)
+        existing_log = CSV.read(annot_file,DataFrame)
         t = pt_click["points"][1]["x"]
         tr_name = trace_names[1+pt_click["points"][1]["curveNumber"]]
         if @isdefined(pt1) == false
@@ -40,12 +41,15 @@ function annotate_traces(w,project)
                 "fieldname"=>tr_name,
                 "datetime_from"=>t,
             )
+            blacklist=false
+            author="tbc"
+            annot_text="tbc"
+            annot_plot(project.config,tr_name,annot_text,blacklist,author,t)
         else
             # Second point
             datetime_from = pt1["datetime_from"]
             datetime_to = t
             ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
-
         end
     end
 end
@@ -173,21 +177,74 @@ function ui_annot(project,from,to,existing_log,pt1)
                 :log_time => "$(now())",
                 :author => textboxes["author"][],
             )
-
+            annot_plot(
+                project.config,
+                new_annot.fieldname[1],
+                new_annot.annot[1],
+                new_annot.blacklist[1],
+                new_annot.author[1],
+                new_annot.datetime_from[1];
+                dt_to=new_annot.datetime_to[1],
+            )
             updated_log = vcat(existing_log,new_annot)
             sort!(existing_log)
-            CSV.write(joinpath(project.paths["annot"],"AnnotationsLog.csv"),updated_log)
+            CSV.write(annot_file,updated_log)
             global pt1 = Dict()
             close(w_annot)
-            println("save")
 
             return pt1
         elseif buttons_cancel_ >0
             global pt1 = Dict()
             close(w_annot)
-            println("cancel")
             return pt1
         end
     end
 
+end
+
+
+function annot_plot(config,fieldname,annot_text,blacklist,author,dt_from;dt_to=[])
+
+    find_alias(timeseries,ts) = timeseries[ts]["alias"]
+    ts = keys(config["timeseries"])
+    ts_alias = find_alias.((config["timeseries"],),ts)
+    tr = string.(ts)[findfirst(ts_alias.==fieldname)]
+
+    subplots = find_subplot_fields.((config,),1:length(config["subplots"]))
+    i_subplot = findfirst(findall_arr2.(subplots,(tr)))
+
+
+    DateTime(dt_from,"y-m-d H:M:S")
+    DateTime(dt_from,"y-m-d H:M:S")
+
+    if isempty(dt_to)
+        t = [DateTime(dt_from,"y-m-d H:M:S")]
+        y = [10]
+        name = "tmp"
+    else
+        t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
+        y = [10;10]
+        name = "annot"
+    end
+
+    if blacklist==true
+        clr = :black
+    else
+        clr = "#55555555"
+    end
+
+    tr = scatter(x=t,y=y,
+        name=name,
+        text="[$(author)] $(annot_text)",
+        mode="lines+markers",
+        line=attr(dash=:dash,color=clr),
+        marker=attr(symbol=Symbol("100"),size=10,color=clr),
+        yaxis="y$(length(subplots)+1-i_subplot)",
+        hoverinfo="text",
+    )
+
+    find_tracenames(plt_data,i) = plt_data[i]["name"]
+    rm_traces = findall(find_tracenames.((plt.plot.data,),1:length(plt.plot.data)).=="tmp")
+    [deletetraces!(plt,rm_tr) for rm_tr in rm_traces]
+    addtraces!(plt,tr)
 end
