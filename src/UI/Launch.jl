@@ -221,7 +221,6 @@ function ui_launch()
 
             launch_project(w,project_name,paths)
 
-
         end
 
     end
