@@ -217,6 +217,9 @@ function ui_launch()
                 read(file,String)
             end
             paths = JSON.parse(f)
+            push!(paths,"root"=>join(split(paths["compiled"],"\\")[1:end-1],"\\"))
+            push!(paths,"annot"=>joinpath(paths["root"],"annotations"))
+
 
 
             launch_project(w,project_name,paths)

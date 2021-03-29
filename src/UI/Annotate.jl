@@ -19,8 +19,6 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
     trace_names = trace_name.(plt.plot.data)
 
     # Prep csv log file
-    push!(project.paths,"root"=>join(split(project.paths["compiled"],"\\")[1:end-1],"\\"))
-    push!(project.paths,"annot"=>joinpath(project.paths["root"],"annotations"))
     existing_folder = sum(readdir(project.paths["root"]).=="annotations")>0
     if existing_folder==false
         mkdir(project.paths["annot"])
@@ -32,6 +30,15 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
         CSV.write(annot_file,ptLog)
     end
 
+    existing_log = CSV.read(annot_file,DataFrame)
+    annot_plot.((project.config,),
+        existing_log.field,
+        existing_log.annot,
+        existing_log.blacklist,
+        existing_log.author,
+        existing_log.datetime_from,
+        existing_log.datetime_to,
+    )
 
     on(plt["click"]) do pt_click
         existing_log = CSV.read(annot_file,DataFrame)
@@ -49,7 +56,7 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
             blacklist=false
             author="tbc"
             annot_text="tbc"
-            annot_plot(project.config,tr_name,annot_text,blacklist,author,t)
+            annot_plot(project.config,tr_name,annot_text,blacklist,author,t,[])
         else
             # Second point
             datetime_from = pt1["datetime_from"]
@@ -193,8 +200,8 @@ function ui_annot(project,from,to,existing_log,pt1)
                 new_annot.annot[1],
                 new_annot.blacklist[1],
                 new_annot.author[1],
-                new_annot.datetime_from[1];
-                dt_to=new_annot.datetime_to[1],
+                new_annot.datetime_from[1],
+                new_annot.datetime_to[1],
             )
             updated_log = vcat(existing_log,new_annot)
             sort!(existing_log)
@@ -213,7 +220,7 @@ function ui_annot(project,from,to,existing_log,pt1)
 end
 
 
-function annot_plot(config,field,annot_text,blacklist,author,dt_from;dt_to=[])
+function annot_plot(config,field,annot_text,blacklist,author,dt_from,dt_to)
 
     find_alias(timeseries,ts) = timeseries[ts]["alias"]
     ts = keys(config["timeseries"])
@@ -235,13 +242,13 @@ function annot_plot(config,field,annot_text,blacklist,author,dt_from;dt_to=[])
     else
         t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
         y = find_y_value.((plt.plot.data,),(i_trace,),t)
-        name = ""
+        name = " "
     end
 
     if blacklist==true
         clr = :black
     else
-        clr = "#555555bb"
+        clr = "#444444bb"
     end
 
     tr = scatter(x=t,y=y,
