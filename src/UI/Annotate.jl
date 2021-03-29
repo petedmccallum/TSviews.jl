@@ -1,6 +1,6 @@
 function annotate_traces(w,project;fname="AnnotationsLog.csv")
     ptLog = DataFrame(
-        fieldname=[],
+        field=[],
         datetime_from=[],
         datetime_to=[],
         annot=[],
@@ -8,6 +8,11 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
         infill=[],
         log_time=[],
         author=[],
+        closed=[],
+        infill_method=[],
+        infill_const=[],
+        response=[],
+        response_author=[],
     )
 
     trace_name(tr) = tr["name"]
@@ -38,7 +43,7 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
         if isempty(pt1)
             # First point (of 2)
             pt1 = Dict(
-                "fieldname"=>tr_name,
+                "field"=>tr_name,
                 "datetime_from"=>t,
             )
             blacklist=false
@@ -165,10 +170,10 @@ function ui_annot(project,from,to,existing_log,pt1)
             chkboxes_infill_ in chkboxes["infill"]
 
 
-        if buttons_save_>0
+        if buttons_save_>0 && !isnothing(textboxes["annot_text"][])
             # Fill form response
             new_annot = DataFrame(
-                :fieldname => pt1["fieldname"],
+                :field => pt1["field"],
                 :datetime_from => "$(datepickers["from"][]) $(timepickers["from"][])",
                 :datetime_to => "$(datepickers["to"][]) $(timepickers["to"][])",
                 :annot => textboxes["annot_text"][],
@@ -176,10 +181,15 @@ function ui_annot(project,from,to,existing_log,pt1)
                 :infill => textboxes["infill"][],
                 :log_time => "$(now())",
                 :author => textboxes["author"][],
+                :closed => "tbc",
+                :infill_method => "tbc",
+                :infill_const => "tbc",
+                :response => "tbc",
+                :response_author => "tbc",
             )
             annot_plot(
                 project.config,
-                new_annot.fieldname[1],
+                new_annot.field[1],
                 new_annot.annot[1],
                 new_annot.blacklist[1],
                 new_annot.author[1],
@@ -203,34 +213,35 @@ function ui_annot(project,from,to,existing_log,pt1)
 end
 
 
-function annot_plot(config,fieldname,annot_text,blacklist,author,dt_from;dt_to=[])
+function annot_plot(config,field,annot_text,blacklist,author,dt_from;dt_to=[])
 
     find_alias(timeseries,ts) = timeseries[ts]["alias"]
     ts = keys(config["timeseries"])
     ts_alias = find_alias.((config["timeseries"],),ts)
-    tr = string.(ts)[findfirst(ts_alias.==fieldname)]
+    tr = string.(ts)[findfirst(ts_alias.==field)]
 
     subplots = find_subplot_fields.((config,),1:length(config["subplots"]))
     i_subplot = findfirst(findall_arr2.(subplots,(tr)))
 
-
-    DateTime(dt_from,"y-m-d H:M:S")
-    DateTime(dt_from,"y-m-d H:M:S")
+    # Eval corresponding y-values
+    find_tracenames(plt_data,i) = plt_data[i]["name"]
+    i_trace = findfirst(find_tracenames.((plt.plot.data,),1:length(plt.plot.data)).==field)
+    find_y_value(plt_data,i_trace,t) = plt_data[i_trace]["y"][plt_data[i_trace]["x"].==t][1]
 
     if isempty(dt_to)
         t = [DateTime(dt_from,"y-m-d H:M:S")]
-        y = [10]
+        y = find_y_value.((plt.plot.data,),(i_trace,),t)
         name = "tmp"
     else
         t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
-        y = [10;10]
-        name = "annot"
+        y = find_y_value.((plt.plot.data,),(i_trace,),t)
+        name = ""
     end
 
     if blacklist==true
         clr = :black
     else
-        clr = "#55555555"
+        clr = "#555555bb"
     end
 
     tr = scatter(x=t,y=y,
@@ -238,13 +249,14 @@ function annot_plot(config,fieldname,annot_text,blacklist,author,dt_from;dt_to=[
         text="[$(author)] $(annot_text)",
         mode="lines+markers",
         line=attr(dash=:dash,color=clr),
-        marker=attr(symbol=Symbol("100"),size=10,color=clr),
+        marker=attr(symbol=Symbol("300"),size=15,color=clr),
         yaxis="y$(length(subplots)+1-i_subplot)",
-        hoverinfo="text",
+        showlegend=false,
     )
 
-    find_tracenames(plt_data,i) = plt_data[i]["name"]
+
     rm_traces = findall(find_tracenames.((plt.plot.data,),1:length(plt.plot.data)).=="tmp")
     [deletetraces!(plt,rm_tr) for rm_tr in rm_traces]
     addtraces!(plt,tr)
+
 end
