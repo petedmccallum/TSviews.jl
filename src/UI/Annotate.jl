@@ -1,5 +1,6 @@
 function annotate_traces(w,project;fname="AnnotationsLog.csv")
     ptLog = DataFrame(
+        site=[],
         field=[],
         datetime_from=[],
         datetime_to=[],
@@ -50,6 +51,7 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
         if isempty(pt1)
             # First point (of 2)
             pt1 = Dict(
+                "site"=>project.current_site,
                 "field"=>tr_name,
                 "datetime_from"=>t,
             )
@@ -163,7 +165,7 @@ function ui_annot(project,from,to,existing_log,pt1)
         )
     );
 
-    (annot_text, blacklist_bool, author, infill)
+    # (annot_text, blacklist_bool, author, infill)
 
     @manipulate for
             buttons_save_ in buttons["save"],
@@ -180,6 +182,7 @@ function ui_annot(project,from,to,existing_log,pt1)
         if buttons_save_>0 && !isnothing(textboxes["annot_text"][])
             # Fill form response
             new_annot = DataFrame(
+                :site => project.current_site,
                 :field => pt1["field"],
                 :datetime_from => "$(datepickers["from"][]) $(timepickers["from"][])",
                 :datetime_to => "$(datepickers["to"][]) $(timepickers["to"][])",
@@ -236,26 +239,38 @@ function annot_plot(config,field,annot_text,blacklist,author,dt_from,dt_to)
     find_y_value(plt_data,i_trace,t) = plt_data[i_trace]["y"][plt_data[i_trace]["x"].==t][1]
 
     if isempty(dt_to)
-        t = [DateTime(dt_from,"y-m-d H:M:S")]
+        if length(split(dt_from,"/")[1])==2
+            t = [DateTime(dt_from,"d/m/y H:M:S")]
+        elseif length(split(dt_from,"/")[1])==4
+            t = [DateTime(dt_from,"y/m/d H:M:S")]
+        else
+            t = [DateTime(dt_from,"y-m-d H:M:S")]
+        end
         y = find_y_value.((plt.plot.data,),(i_trace,),t)
         name = "tmp"
     else
-        t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
+        if length(split(dt_from,"/")[1])==2
+            t = [DateTime(dt_from,"d/m/y H:M:S");DateTime(dt_to,"d/m/y H:M:S")]
+        elseif length(split(dt_from,"/")[1])==4
+            t = [DateTime(dt_from,"y/m/d H:M:S");DateTime(dt_to,"y/m/d H:M:S")]
+        else
+            t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
+        end
         y = find_y_value.((plt.plot.data,),(i_trace,),t)
         name = " "
     end
 
     if blacklist==true
-        clr = :black
+        clr = "#11111188"
     else
-        clr = "#444444bb"
+        clr = "#44444444"
     end
 
     tr = scatter(x=t,y=y,
         name=name,
         text="[$(author)] $(annot_text)",
-        mode="lines+markers",
-        line=attr(dash=:dash,color=clr),
+        mode="lines",
+        line=attr(width=16,color="bb$(clr[1:6])"),#line=attr(dash=:dash,color=clr),
         marker=attr(symbol=Symbol("300"),size=15,color=clr),
         yaxis="y$(length(subplots)+1-i_subplot)",
         showlegend=false,
