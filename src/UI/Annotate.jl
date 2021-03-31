@@ -1,20 +1,4 @@
 function annotate_traces(w,project;fname="AnnotationsLog.csv")
-    ptLog = DataFrame(
-        site=[],
-        field=[],
-        datetime_from=[],
-        datetime_to=[],
-        annot=[],
-        blacklist=[],
-        infill=[],
-        log_time=[],
-        author=[],
-        closed=[],
-        infill_method=[],
-        infill_const=[],
-        response=[],
-        response_author=[],
-    )
 
     trace_name(tr) = tr["name"]
     trace_names = trace_name.(plt.plot.data)
@@ -27,24 +11,56 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
 
     existing_file = sum(readdir(project.paths["annot"]).==fname)>0
     global annot_file = joinpath(project.paths["annot"],fname)
+    # Create annotation log
     if existing_file==false
-        CSV.write(annot_file,ptLog)
+        # Blank annotation log for new file
+        existing_log = DataFrame(
+            site=[],
+            field=[],
+            datetime_from=[],
+            datetime_to=[],
+            annot=[],
+            blacklist=[],
+            infill=[],
+            log_time=[],
+            author=[],
+            closed=[],
+            infill_method=[],
+            infill_const=[],
+            response=[],
+            response_author=[],
+        )
+        CSV.write(annot_file,existing_log)
+    else
+        existing_log = CSV.read(annot_file,DataFrame)
+        annot_plot.((project.config,),
+            existing_log.field,
+            existing_log.annot,
+            existing_log.blacklist,
+            existing_log.infill,
+            existing_log.author,
+            existing_log.datetime_from,
+            existing_log.datetime_to,
+        )
     end
 
-    existing_log = CSV.read(annot_file,DataFrame)
-    annot_plot.((project.config,),
-        existing_log.field,
-        existing_log.annot,
-        existing_log.blacklist,
-        existing_log.author,
-        existing_log.datetime_from,
-        existing_log.datetime_to,
-    )
-
+    ############################################################################ ↓ TEMP
+    datetime_click = "2021-03-30 06:53"
+    datetime_click = "2021-03-30 08:53"
+    datetime_click = DateTime(datetime_click[1:16],"y-m-d H:M")
+    # on(plt["click"]) do pt_click
+    #     datetime_click = pt_click["points"][1]["x"]
+    #     field = trace_names[1+pt_click["points"][1]["curveNumber"]]
+    #     println(datetime_click)
+    #     println(field)
+    # end
+    field="RH (%)"
+    ############################################################################ ↑ TEMP
     on(plt["click"]) do pt_click
         existing_log = CSV.read(annot_file,DataFrame)
-        t = pt_click["points"][1]["x"]
-        tr_name = trace_names[1+pt_click["points"][1]["curveNumber"]]
+        datetime_click = pt_click["points"][1]["x"]
+        datetime_click = DateTime(datetime_click[1:16],"y-m-d H:M")
+        field = trace_names[1+pt_click["points"][1]["curveNumber"]]
         if @isdefined(pt1) == false
             global pt1 = Dict()
         end
@@ -52,24 +68,28 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
             # First point (of 2)
             pt1 = Dict(
                 "site"=>project.current_site,
-                "field"=>tr_name,
-                "datetime_from"=>t,
+                "field"=>field,
+                "datetime_from"=>datetime_click,
             )
             blacklist=false
+            infill=false
             author="tbc"
             annot_text="tbc"
-            annot_plot(project.config,tr_name,annot_text,blacklist,author,t,[])
+            config = project.config
+            datetime_from = datetime_click
+            datetime_to = nothing
+            annot_plot(config,field,annot_text,blacklist,infill,author,datetime_from,datetime_to)
         else
             # Second point
             datetime_from = pt1["datetime_from"]
-            datetime_to = t
-            ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
+            datetime_to = datetime_click
+            ui_annot(project,datetime_from,datetime_to,existing_log,pt1);
         end
     end
 end
 
 
-function ui_annot(project,from,to,existing_log,pt1)
+function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
     author = split(Base.Filesystem.homedir(),"\\")[end]
     buttons = Dict(
         "save" => button("Save"),
@@ -85,12 +105,12 @@ function ui_annot(project,from,to,existing_log,pt1)
         "infill" => checkbox(),
     )
     datepickers = Dict(
-        "from" => datepicker(Date(from[1:10])),
-        "to" => datepicker(Date(to[1:10])),
+        "from" => datepicker(Date(datetime_from)),
+        "to" => datepicker(Date(datetime_to)),
     )
     timepickers = Dict(
-        "from" => timepicker(Time(from[12:end])),
-        "to" => timepicker(Time(to[12:end])),
+        "from" => timepicker(Time(datetime_from)),
+        "to" => timepicker(Time(datetime_to)),
     )
 
     # Reformat widgets
@@ -179,16 +199,16 @@ function ui_annot(project,from,to,existing_log,pt1)
             chkboxes_infill_ in chkboxes["infill"]
 
 
-        if buttons_save_>0 && !isnothing(textboxes["annot_text"][])
+        if buttons["save"][]>0 && !isnothing(textboxes["annot_text"][])
             # Fill form response
             new_annot = DataFrame(
                 :site => project.current_site,
                 :field => pt1["field"],
-                :datetime_from => "$(datepickers["from"][]) $(timepickers["from"][])",
-                :datetime_to => "$(datepickers["to"][]) $(timepickers["to"][])",
+                :datetime_from => datepickers["from"][]+timepickers["from"][],
+                :datetime_to => datepickers["to"][]+timepickers["to"][],
                 :annot => textboxes["annot_text"][],
                 :blacklist => chkboxes["blacklist"][],
-                :infill => textboxes["infill"][],
+                :infill => chkboxes["infill"][],
                 :log_time => "$(now())",
                 :author => textboxes["author"][],
                 :closed => "tbc",
@@ -202,6 +222,7 @@ function ui_annot(project,from,to,existing_log,pt1)
                 new_annot.field[1],
                 new_annot.annot[1],
                 new_annot.blacklist[1],
+                new_annot.infill[1],
                 new_annot.author[1],
                 new_annot.datetime_from[1],
                 new_annot.datetime_to[1],
@@ -219,11 +240,11 @@ function ui_annot(project,from,to,existing_log,pt1)
             return pt1
         end
     end
-
+    return w_annot
 end
 
 
-function annot_plot(config,field,annot_text,blacklist,author,dt_from,dt_to)
+function annot_plot(config,field,annot,blacklist,infill,author,datetime_from,datetime_to)
 
     find_alias(timeseries,ts) = timeseries[ts]["alias"]
     ts = keys(config["timeseries"])
@@ -237,41 +258,44 @@ function annot_plot(config,field,annot_text,blacklist,author,dt_from,dt_to)
     find_tracenames(plt_data,i) = plt_data[i]["name"]
     i_trace = findfirst(find_tracenames.((plt.plot.data,),1:length(plt.plot.data)).==field)
     find_y_value(plt_data,i_trace,t) = plt_data[i_trace]["y"][plt_data[i_trace]["x"].==t][1]
+    find_y_value_range(plt_data,i_trace,(t1,t2)) = plt_data[i_trace]["y"][findfirst(plt_data[i_trace]["x"].>=t1):findfirst(plt_data[i_trace]["x"].>=t2)]
 
-    if isempty(dt_to)
-        if length(split(dt_from,"/")[1])==2
-            t = [DateTime(dt_from,"d/m/y H:M:S")]
-        elseif length(split(dt_from,"/")[1])==4
-            t = [DateTime(dt_from,"y/m/d H:M:S")]
-        else
-            t = [DateTime(dt_from,"y-m-d H:M:S")]
-        end
+    if isnothing(datetime_to)
+        t = [datetime_from]
         y = find_y_value.((plt.plot.data,),(i_trace,),t)
+        mode = "markers"
+        clr = "#11111188"
         name = "tmp"
     else
-        if length(split(dt_from,"/")[1])==2
-            t = [DateTime(dt_from,"d/m/y H:M:S");DateTime(dt_to,"d/m/y H:M:S")]
-        elseif length(split(dt_from,"/")[1])==4
-            t = [DateTime(dt_from,"y/m/d H:M:S");DateTime(dt_to,"y/m/d H:M:S")]
+        t = [datetime_from;datetime_to;datetime_to;datetime_from;datetime_from]
+        t1 = datetime_from
+        t2 = datetime_to
+        plt_data = plt.plot.data
+        ys = skipmissing(find_y_value_range(plt.plot.data,i_trace,(datetime_from,datetime_to)))
+        annot_box_scale = (maximum(skipmissing(plt_data[i_trace]["y"]))-minimum(skipmissing(plt_data[i_trace]["y"])))*0.1
+        y = [minimum(ys)-annot_box_scale,minimum(ys)-annot_box_scale,maximum(ys)+annot_box_scale,maximum(ys)+annot_box_scale,minimum(ys)-annot_box_scale]
+        mode = "lines"
+        if blacklist==true
+            clr = "#11111188"
+            name = "BLACKLIST"
+        elseif infill==true
+            clr = "#a55eea"
+            name = "Infill"
         else
-            t = [DateTime(dt_from,"y-m-d H:M:S");DateTime(dt_to,"y-m-d H:M:S")]
+            clr = "#666666bb"
+            name = "Comment"
         end
-        y = find_y_value.((plt.plot.data,),(i_trace,),t)
-        name = " "
     end
 
-    if blacklist==true
-        clr = "#11111188"
-    else
-        clr = "#44444444"
-    end
 
     tr = scatter(x=t,y=y,
         name=name,
-        text="[$(author)] $(annot_text)",
-        mode="lines",
-        line=attr(width=16,color="bb$(clr[1:6])"),#line=attr(dash=:dash,color=clr),
+        text="[$(author)] $(annot)",
+        mode=mode,
+        line=attr(width=1,color=clr,dash=:dot),
         marker=attr(symbol=Symbol("300"),size=15,color=clr),
+        fill="toself",
+        fillopacity=0.2,
         yaxis="y$(length(subplots)+1-i_subplot)",
         showlegend=false,
     )

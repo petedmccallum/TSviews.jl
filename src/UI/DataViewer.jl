@@ -18,6 +18,7 @@ function data_viewer(w,project)
         :legend_x=>0.,
         :legend_y=>1.05,
         :margin_l=>80,
+        :hovermode=>"closest",
     ))
 
     if n_plots == 1
