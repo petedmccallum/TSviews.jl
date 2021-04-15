@@ -1,6 +1,5 @@
 function annotate_traces(w,project;fname="AnnotationsLog.csv")
 
-    trace_name(tr) = tr["name"]
     trace_names = trace_name.(plt.plot.data)
 
     # Prep csv log file
@@ -58,52 +57,103 @@ function annotate_traces(w,project;fname="AnnotationsLog.csv")
     ############################################################################ ↑ TEMP
     on(plt["click"]) do pt_click
         existing_log = CSV.read(annot_file,DataFrame)
-        datetime_click = pt_click["points"][1]["x"]
-        datetime_click = DateTime(datetime_click[1:16],"y-m-d H:M")
-        field = trace_names[1+pt_click["points"][1]["curveNumber"]]
-        if @isdefined(pt1) == false
-            global pt1 = Dict()
-        end
-        if isempty(pt1)
-            # First point (of 2)
-            pt1 = Dict(
-                "site"=>project.current_site,
-                "field"=>field,
-                "datetime_from"=>datetime_click,
-            )
-            blacklist=false
-            infill=false
-            author="tbc"
-            annot_text="tbc"
-            config = project.config
-            datetime_from = datetime_click
-            datetime_to = nothing
-            annot_plot(config,field,annot_text,blacklist,infill,author,datetime_from,datetime_to)
+        if sum(keys(pt_click["points"][1]).=="x")>0
+            # If timeseries is clicked on ("x" occurs in `pt_click`)
+            datetime_click = pt_click["points"][1]["x"]
+            datetime_click = DateTime(datetime_click[1:16],"y-m-d H:M")
+            field = trace_names[1+pt_click["points"][1]["curveNumber"]]
+            y = pt_click["points"][1]["y"]
+            println("$(datetime_click)\t$(field)\t$(y)")
+            if @isdefined(current_annot) == false
+                global current_annot = Dict()
+            end
+            if isempty(current_annot)
+                # First point (of 2)
+                current_annot = Dict(
+                    "site"=>project.current_site,
+                    "field"=>field,
+                    "datetime_from"=>datetime_click,
+                )
+                blacklist=false
+                infill=false
+                author="tbc"
+                annot_text="tbc"
+                config = project.config
+                datetime_to = nothing
+                annot_plot(config,
+                    field,
+                    annot_text,
+                    blacklist,
+                    infill,
+                    author,
+                    current_annot["datetime_from"],
+                    datetime_to,
+                )
+            else
+                # Second point
+                push!(current_annot,"datetime_to"=>datetime_click)
+                new_annot = current_annot
+                current_annot = Dict()
+                ui_annot(project;existing_log=existing_log,new_annot=new_annot);
+            end
         else
-            # Second point
-            datetime_from = pt1["datetime_from"]
-            datetime_to = datetime_click
-            ui_annot(project,datetime_from,datetime_to,existing_log,pt1);
+            # If annotation area is clicked on ("x" doesn't occur in `pt_click` in this case)
+            curveNumber = Int(pt_click["points"][1]["curveNumber"])
+            trace_names = trace_name.(plt.plot.data)
+            i_tr_annot = vcat([
+                findall(trace_names.=="Comment"),
+                findall(trace_names.=="Infill"),
+                findall(trace_names.=="BLACKLIST")
+            ]...)
+            i_click_annot = findfirst(i_tr_annot.==curveNumber)
+            # println(existing_log[i_click_annot,:])
+            ui_annot(project;recalled_annot=existing_log[i_click_annot,:]);
         end
     end
 end
 
 
-function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
-    author = split(Base.Filesystem.homedir(),"\\")[end]
-    buttons = Dict(
-        "save" => button("Save"),
-        "cancel" => button("Cancel"),
-    )
-    textboxes = Dict(
-        "annot_text" => textbox("annotation text...",multiline=true),
-        "author" => textbox("author",value=author),
-        "infill" => textbox("#.###"),
-    )
-    chkboxes = Dict(
-        "blacklist" => checkbox(),
-        "infill" => checkbox(),
-    )
+function ui_annot(project;existing_log=DataFrame(),new_annot=Dict(),recalled_annot=[])
+    # Adapt for new annot or existing annot
+    if isempty(new_annot)==false
+        author = split(Base.Filesystem.homedir(),"\\")[end]
+        datetime_from = new_annot["datetime_from"]
+        datetime_to = new_annot["datetime_to"]
+        esc_button_str = "Cancel"
+        global field = new_annot["field"]
+
+        textboxes = Dict(
+            "annot_text" => textbox("annotation text...",multiline=true),
+            "author" => textbox("author",value=author),
+            "infill" => textbox("#.###"),
+            "response" => textbox("Comment response",multiline=true),
+            "author_resp" => textbox("author_resp",value=author),
+        )
+        chkboxes = Dict(
+            "blacklist" => checkbox(),
+            "infill" => checkbox(),
+            "closed" => checkbox(),
+        )
+    else
+        datetime_from = recalled_annot.datetime_from[1]
+        datetime_to = recalled_annot.datetime_to[1]
+        esc_button_str = "Delete"
+        global field = recalled_annot.field[1]
+
+        textboxes = Dict(
+            "annot_text" => textbox("annotation text...",value=recalled_annot.annot[1],multiline=true),
+            "author" => textbox("author",value=recalled_annot.author[1]),
+            "infill" => textbox("#.###",value=recalled_annot.infill[1]),
+            "response" => textbox("Comment response",value=recalled_annot.response[1],multiline=true),
+            "author_resp" => textbox("author_resp",value=recalled_annot.response_author[1]),
+        )
+        chkboxes = Dict(
+            "blacklist" => checkbox(recalled_annot.blacklist[1]),
+            "infill" => checkbox(recalled_annot.infill[1]),
+            "closed" => checkbox(recalled_annot.closed[1]),
+        )
+    end
+
     datepickers = Dict(
         "from" => datepicker(Date(datetime_from)),
         "to" => datepicker(Date(datetime_to)),
@@ -112,10 +162,18 @@ function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
         "from" => timepicker(Time(datetime_from)),
         "to" => timepicker(Time(datetime_to)),
     )
+    buttons = Dict(
+        "save" => button("Save"),
+        "cancel" => button(esc_button_str),
+    )
+    infill_types = vcat("constant",unique(find_interp.((project.config["timeseries"],),keys(project.config["timeseries"]))))
+    dropdowns = Dict(
+        "infill" => dropdown(infill_types),
+    )
 
     # Reformat widgets
     textboxes["annot_text"].scope.dom.props[:style] = Dict(
-        :width => "550px",
+        :width => "568px",
         :height => "108px",
     )
     textboxes["author"].scope.dom.props[:style] = Dict(
@@ -126,43 +184,55 @@ function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
         :width => "80px",
         :height => "36px",
     )
+    textboxes["response"].scope.dom.props[:style] = Dict(
+        :width => "568px",
+        :height => "72px",
+    )
+    textboxes["author_resp"].scope.dom.props[:style] = Dict(
+        :width => "100px",
+        :height => "36px",
+    )
 
     div_annot = vbox(
         HTML(string("<div style='font-size:24px'>Annotations</div>")),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>From:</div>"))),
+            vbox(vskip(6px),width("120px",HTML(string("<div style='font-size:16px'>From:</div>")))),
             datepickers["from"],
             timepickers["from"],
         ),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>To:</div>"))),
+            vbox(vskip(6px),width("120px",HTML(string("<div style='font-size:16px'>To:</div>")))),
             datepickers["to"],
             timepickers["to"],
         ),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>Comment:</div>"))),
+            vbox(vskip(6px),width("120px",HTML(string("<div style='font-size:16px'>Comment:</div>")))),
             textboxes["annot_text"],
         ),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>Author/initials:</div>"))),
+            vbox(vskip(6px),width("120px",HTML(string("<div style='font-size:16px'>Author/initials:</div>")))),
             textboxes["author"],
         ),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>Blacklist data:</div>"))),
-            chkboxes["blacklist"],
+            vbox(vskip(1px),width("112px",HTML(string("<div style='font-size:16px'>Blacklist data:</div>")))),
+            vbox(vskip(2px),chkboxes["blacklist"]),
         ),
         vskip(8px),
         hbox(
-            width("120px",HTML(string("<div style='font-size:16px'>Infill constant:</div>"))),
-            chkboxes["infill"],
+            vbox(vskip(5px),width("112px",HTML(string("<div style='font-size:16px'>Infill:</div>")))),
+            vbox(vskip(6px),chkboxes["infill"]),
+            dropdowns["infill"],
             textboxes["infill"],
-        ),
-        vskip(8px),
+        )
+    )
+
+    div_buttons = vbox(
+        vskip(28px),
         hbox(
             buttons["save"],
             hskip(10px),
@@ -170,22 +240,49 @@ function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
         )
     )
 
+
+    if isempty(new_annot)==true
+        div_response = vbox(
+            vskip(16px),
+            Interact.hline(),
+            vskip(24px),
+            hbox(
+                vbox(vskip(6px),width("120px",HTML(string("<div style='font-size:16px'>Response:</div>")))),
+                textboxes["response"],
+            ),
+            vskip(8px),
+            hbox(
+                vbox(vskip(5px),width("112px",HTML(string("<div style='font-size:16px'>Closed?</div>")))),
+                vbox(vskip(6px),chkboxes["closed"]),
+                textboxes["author_resp"],
+            )
+        )
+        div_ALL = vbox(div_annot,div_response,div_buttons)
+        window_height = 720
+    else
+        div_ALL = vbox(div_annot,div_buttons)
+        window_height = 550
+    end
+
+
+
+
     global w_annot = Window(Dict(
         "title"=>"TSviews",
-        "width"=>700,
-        "height"=>500,
+        "width"=>800,
+        "height"=>window_height,
     ));
     body!(w_annot,
         hbox(
             hskip(40px),
             vbox(
                 vskip(20px),
-                div_annot,
+                div_ALL,
             )
         )
     );
 
-    # (annot_text, blacklist_bool, author, infill)
+
 
     @manipulate for
             buttons_save_ in buttons["save"],
@@ -203,7 +300,7 @@ function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
             # Fill form response
             new_annot = DataFrame(
                 :site => project.current_site,
-                :field => pt1["field"],
+                :field => field,
                 :datetime_from => datepickers["from"][]+timepickers["from"][],
                 :datetime_to => datepickers["to"][]+timepickers["to"][],
                 :annot => textboxes["annot_text"][],
@@ -230,14 +327,9 @@ function ui_annot(project,datetime_from,datetime_to,existing_log,pt1)
             updated_log = vcat(existing_log,new_annot)
             sort!(existing_log)
             CSV.write(annot_file,updated_log)
-            global pt1 = Dict()
             close(w_annot)
-
-            return pt1
         elseif buttons_cancel_ >0
-            global pt1 = Dict()
             close(w_annot)
-            return pt1
         end
     end
     return w_annot
@@ -246,7 +338,6 @@ end
 
 function annot_plot(config,field,annot,blacklist,infill,author,datetime_from,datetime_to)
 
-    find_alias(timeseries,ts) = timeseries[ts]["alias"]
     ts = keys(config["timeseries"])
     ts_alias = find_alias.((config["timeseries"],),ts)
     tr = string.(ts)[findfirst(ts_alias.==field)]
@@ -255,10 +346,7 @@ function annot_plot(config,field,annot,blacklist,infill,author,datetime_from,dat
     i_subplot = findfirst(findall_arr2.(subplots,(tr)))
 
     # Eval corresponding y-values
-    find_tracenames(plt_data,i) = plt_data[i]["name"]
     i_trace = findfirst(find_tracenames.((plt.plot.data,),1:length(plt.plot.data)).==field)
-    find_y_value(plt_data,i_trace,t) = plt_data[i_trace]["y"][plt_data[i_trace]["x"].==t][1]
-    find_y_value_range(plt_data,i_trace,(t1,t2)) = plt_data[i_trace]["y"][findfirst(plt_data[i_trace]["x"].>=t1):findfirst(plt_data[i_trace]["x"].>=t2)]
 
     if isnothing(datetime_to)
         t = [datetime_from]
@@ -282,7 +370,7 @@ function annot_plot(config,field,annot,blacklist,infill,author,datetime_from,dat
             clr = "#a55eea"
             name = "Infill"
         else
-            clr = "#666666bb"
+            clr = "#bbbbbbbb"
             name = "Comment"
         end
     end

@@ -98,3 +98,10 @@ addtraces_arr(plt,tr) = addtraces!(plt,tr)
 find_subplot_fields(config,i) = config["subplots"]["$i"]["fields"]
 find_subplot_yaxis(config,i) = config["subplots"]["$i"]["yaxis"]
 findall_arr2(arr,val) = sum(findall(arr.==val))>0
+
+trace_name(tr) = tr["name"]
+find_interp(ts,key) = ts[key]["interp_method"]
+find_alias(timeseries,ts) = timeseries[ts]["alias"]
+find_tracenames(plt_data,i) = plt_data[i]["name"]
+find_y_value(plt_data,i_trace,t) = plt_data[i_trace]["y"][plt_data[i_trace]["x"].==t][1]
+find_y_value_range(plt_data,i_trace,(t1,t2)) = plt_data[i_trace]["y"][findfirst(plt_data[i_trace]["x"].>=t1):findfirst(plt_data[i_trace]["x"].>=t2)]
