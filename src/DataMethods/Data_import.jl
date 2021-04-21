@@ -41,6 +41,10 @@ function import_raw(project)
     # Combine similar dataframes (with same column headings)
     (data_arr, unique_cols_arr) = combine_similar_df(data_arr)
 
+    # Sort datetime
+    data_arr[1] = sort(data_arr[1],[:datetime])
+    data_arr[2] = sort(data_arr[2],[:datetime])
+
     # Interpolations
     data_interp = eval_interpolations(data_arr,unique_cols_arr,project.config)
 
