@@ -69,7 +69,7 @@ function data_viewer(w,project)
     body!(w,vbox(
         vskip(8mm),
         div_sitepicker,
-        vskip(8mm),
+        vskip(25mm),
         Interact.hline(),
         vskip(8mm),
         hbox(
