@@ -21,9 +21,11 @@ function combine_similar_df(data_arr)
     cols_arr_unq = unique(cols_arr)
     unique_cols_arr = find_unique_cols.((cols_arr_unq,),1:length(cols_arr_unq))
     # Rationalise columns across all dataframes, to datetime and unique cols
-    target_cols = vcat(unique_cols_arr...)
-    rationalise_cols(data,cols,target_cols) = data[:,vcat("datetime",intersect(target_cols,cols))]
-    data_arr = rationalise_cols.(data_arr,cols_arr,(target_cols,))
+    if length(unique_cols_arr)>1
+        target_cols = vcat(unique_cols_arr...)
+        rationalise_cols(data,cols,target_cols) = data[:,vcat("datetime",intersect(target_cols,cols))]
+        data_arr = rationalise_cols.(data_arr,cols_arr,(target_cols,))
+    end
     # Merge similar dataframes
     cols_arr_joinstr = join.(cols_arr,",")
     cols_arr_joinstr_unq = unique(cols_arr_joinstr)
