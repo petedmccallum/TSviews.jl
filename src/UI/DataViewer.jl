@@ -90,6 +90,12 @@ function data_viewer(w,project)
 
 
         if widget_sites_ != widget_sites_prev
+            w_loading = Window(Dict(
+                "icon"=>"none",
+                "title"=>"Loading",
+                "width"=>250,
+                "height"=>120,
+            ))
             project.current_site = widget_sites[]
             if sum(keys(project.data).==project.current_site) == 0
                 i_site = findfirst(project.sites.==project.current_site)
@@ -105,6 +111,7 @@ function data_viewer(w,project)
             deletetraces_arr.((plt,),L:-1:1)
             addtraces_arr.((plt,),vcat(tr_site,filltraces))
             widget_sites_prev=widget_sites[]
+            close(w_loading)
         end
 
     end
