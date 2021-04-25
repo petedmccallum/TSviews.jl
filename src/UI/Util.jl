@@ -63,7 +63,9 @@ function filltrace_set(project,i_subplot,i_filltrace)
     n_plots = length(keys(project.config["subplots"]))
     subplot_fields = find_subplot_fields.((project.config,),1:n_plots)
     # i_subplot = findfirst(findall_arr2.(subplot_fields,(col,)))
-    find_subplot_max(project,col) = ceil(1.05*maximum(skipmissing(project.data[project.current_site][!,col])))
+    skipmissing_var(arr) = arr[findall(ismissing.(arr).==false)]
+    skipnan(arr) = arr[findall(isnan.(arr).==false)]
+    find_subplot_max(project,col) = ceil(1.05*maximum(skipnan(skipmissing_var(project.data[project.current_site][!,col]))))
     find_subplot_maxs(project,cols) = maximum(find_subplot_max.((project,),cols))
     subplot_maxs = find_subplot_maxs.((project,),subplot_fields)
 
