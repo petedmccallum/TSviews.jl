@@ -21,7 +21,7 @@ function const_power_from_ene(df,t_vec,col_pwr,col_ene)
     i_case2b = i_case2[Not(i_case2a)]
     i_case2a = i_case2[i_case2a]
     # Cases 1&3
-    i_case1 = findall(abs.(interp_ratio).<=1.)
+    i_case1 = findall(abs.(interp_ratio).<1.)
     i_case3 = setdiff(i_case_1_3,i_case1)
     i_case3ac = intersect(i_case3,findall(interp_numer.>=0))
     i_case3bd = setdiff(i_case3,i_case3ac)
